@@ -23,7 +23,23 @@ MIME_TYPES = {
     "mvtb": "application/x-protobuf",
     "topojson": "application/json",
 }
-TileRequest = namedtuple('TileRequest', ['x', 'y', 'z', 'format'])
+TileRequest = namedtuple('TileRequest', ['z', 'x', 'y', 'format'])
+
+
+class MetatileNotModifiedException(Exception):
+    pass
+
+
+class MetatileNotFoundException(Exception):
+    pass
+
+
+class UnknownMetatileException(Exception):
+    pass
+
+
+class TileNotFoundInMetatile(Exception):
+    pass
 
 
 def is_power_of_two(num):
@@ -114,9 +130,16 @@ def metatile_fetch(meta, last_modified):
     if last_modified:
         get_params['IfModifiedSince'] = last_modified
 
-    response = s3.get_object(**get_params)
-
-    return response
+    try:
+        return s3.get_object(**get_params)
+    except botocore.exceptions.ClientError as e:
+        error_code = str(e.response.get('Error', {}).get('Code'))
+        if error_code == '304':
+            raise MetatileNotModifiedException()
+        elif error_code == 'NoSuchKey':
+            raise MetatileNotFoundException("s3://%s/%s" % (s3_bucket, s3_key))
+        else:
+            raise UnknownMetatileException(error_code)
 
 
 def parse_header_time(tstamp):
@@ -135,10 +158,11 @@ def extract_tile(data, offset):
         y=offset.y,
         fmt=offset.format,
     )
-    data = z.read(offset_key)
 
-    return data
-
+    try:
+        return z.read(offset_key)
+    except KeyError as e:
+        raise TileNotFoundInMetatile(e)
 
 @app.route('/mapzen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
@@ -164,11 +188,15 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         response.headers['Content-Type'] = MIME_TYPES.get(fmt)
         response.headers['Last-Modified'] = storage_result['LastModified']
         return response
-    except botocore.exceptions.ClientError as e:
-        error_code = str(e.response.get('Error', {}).get('Code'))
-        if error_code == '304':
-            return make_response('', 304)
-        elif error_code == 'NoSuchKey':
-            return make_response('Metatile not found', 404)
-        else:
-            return make_response('Server error %s' % error_code, 500)
+
+    except MetatileNotFoundException:
+        current_app.logger.exception("Could not find metatile")
+        return "Metatile not found", 404
+    except TileNotFoundInMetatile:
+        current_app.logger.exception("Could not find tile in metatile")
+        return "Tile not found", 404
+    except MetatileNotModifiedException:
+        return "", 304
+    except UnknownMetatileException:
+        current_app.logger.exception("Error fetching metatile")
+        return "Metatile fetch problem", 500
