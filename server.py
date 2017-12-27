@@ -119,8 +119,6 @@ def metatile_fetch(meta, last_modified):
     s3_bucket = current_app.config.get('S3_BUCKET')
     s3_key = compute_key(s3_key_prefix, 'all', meta, include_hash)
 
-    current_app.logger.info("Fetching s3://%s/%s", s3_bucket, s3_key)
-
     s3 = boto3.client('s3')
     get_params = {
         "Bucket": s3_bucket,
@@ -163,6 +161,7 @@ def extract_tile(data, offset):
         return z.read(offset_key)
     except KeyError as e:
         raise TileNotFoundInMetatile(e)
+
 
 @app.route('/mapzen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
