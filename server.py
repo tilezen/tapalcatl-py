@@ -71,15 +71,15 @@ def meta_and_offset(requested_tile, meta_size, tile_size):
         offset = TileRequest(0, 0, 0, requested_tile.format)
     else:
         meta = TileRequest(
+            requested_tile.z - delta_z,
             requested_tile.x >> delta_z,
             requested_tile.y >> delta_z,
-            requested_tile.z - delta_z,
             'zip',
         )
         offset = TileRequest(
+            requested_tile.z - meta.z,
             requested_tile.x - (meta.x << delta_z),
             requested_tile.y - (meta.y << delta_z),
-            requested_tile.z - meta.z,
             requested_tile.format,
         )
 
@@ -166,7 +166,7 @@ def extract_tile(data, offset):
 
 @app.route('/mapzen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
-    requested_tile = TileRequest(x, y, z, fmt)
+    requested_tile = TileRequest(z, x, y, fmt)
 
     tile_size = tile_pixel_size / 256
 
