@@ -220,8 +220,10 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         storage_result = retrieve_tile(meta, offset, request_cache_info)
 
         response = make_response(storage_result.data)
-        response.headers['Content-Type'] = MIME_TYPES.get(fmt)
-        response.headers['Last-Modified'] = storage_result.cache_info.last_modified
+        response.content_type = MIME_TYPES.get(fmt)
+        response.last_modified = storage_result.cache_info.last_modified
+        response.cache_control.max_age = 600
+        response.cache_control.public = True
         return response
 
     except MetatileNotFoundException:
