@@ -4,6 +4,7 @@ import dateutil.parser
 import hashlib
 import math
 import zipfile
+from cachetools import LFUCache, cached
 from collections import namedtuple
 from cStringIO import StringIO
 from flask import Flask, current_app, make_response, request
@@ -24,6 +25,9 @@ MIME_TYPES = {
     "topojson": "application/json",
 }
 TileRequest = namedtuple('TileRequest', ['z', 'x', 'y', 'format'])
+CacheInfo = namedtuple('CacheInfo', ['last_modified', 'etag'])
+StorageResponse = namedtuple('StorageResponse', ['data', 'cache_info'])
+lfu_cache = LFUCache(50)
 
 
 class MetatileNotModifiedException(Exception):
@@ -112,7 +116,8 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
     return k[1:]
 
 
-def metatile_fetch(meta, last_modified):
+@cached(lfu_cache)
+def metatile_fetch(meta, cache_info):
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
 
@@ -125,19 +130,36 @@ def metatile_fetch(meta, last_modified):
         "Key": s3_key,
     }
 
-    if last_modified:
-        get_params['IfModifiedSince'] = last_modified
+    if cache_info.last_modified:
+        get_params['IfModifiedSince'] = cache_info.last_modified
+
+    if cache_info.etag:
+        get_params['IfNoneMatch'] = cache_info.etag
 
     try:
-        return s3.get_object(**get_params)
+        response = s3.get_object(**get_params)
+
+        result = StorageResponse(
+            data=response['Body'].read(),
+            cache_info=CacheInfo(
+                last_modified=response['LastModified'],
+                etag=None,
+            )
+        )
+
+        return result
     except botocore.exceptions.ClientError as e:
         error_code = str(e.response.get('Error', {}).get('Code'))
         if error_code == '304':
             raise MetatileNotModifiedException()
         elif error_code == 'NoSuchKey':
-            raise MetatileNotFoundException("s3://%s/%s" % (s3_bucket, s3_key))
+            raise MetatileNotFoundException(
+                "No tile found at s3://%s/%s" % (s3_bucket, s3_key)
+            )
         else:
-            raise UnknownMetatileException(error_code)
+            raise UnknownMetatileException(
+                "%s at s3://%s/%s" % (error_code,  s3_bucket, s3_key)
+            )
 
 
 def parse_header_time(tstamp):
@@ -147,7 +169,8 @@ def parse_header_time(tstamp):
         return None
 
 
-def extract_tile(data, offset):
+def extract_tile(metatile_bytes, offset):
+    data = StringIO(metatile_bytes)
     z = zipfile.ZipFile(data, 'r')
 
     offset_key = '{zoom}/{x}/{y}.{fmt}'.format(
@@ -163,6 +186,19 @@ def extract_tile(data, offset):
         raise TileNotFoundInMetatile(e)
 
 
+def retrieve_tile(meta, offset, cache_info):
+    metatile_data = metatile_fetch(meta, cache_info)
+    tile_data = extract_tile(metatile_data.data, offset)
+
+    return StorageResponse(
+        data=tile_data,
+        cache_info=CacheInfo(
+            last_modified=metatile_data.cache_info.last_modified,
+            etag=None,
+        )
+    )
+
+
 @app.route('/mapzen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
     requested_tile = TileRequest(z, x, y, fmt)
@@ -175,17 +211,17 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         tile_size,
     )
 
-    request_last_mod = parse_header_time(request.headers.get('If-Modified-Since'))
+    request_cache_info = CacheInfo(
+        last_modified=parse_header_time(request.headers.get('If-Modified-Since')),
+        etag=request.headers.get('If-None-Match'),
+    )
 
     try:
-        storage_result = metatile_fetch(meta, request_last_mod)
+        storage_result = retrieve_tile(meta, offset, request_cache_info)
 
-        metatile_data = StringIO(storage_result['Body'].read())
-        tile_data = extract_tile(metatile_data, offset)
-
-        response = make_response(tile_data)
+        response = make_response(storage_result.data)
         response.headers['Content-Type'] = MIME_TYPES.get(fmt)
-        response.headers['Last-Modified'] = storage_result['LastModified']
+        response.headers['Last-Modified'] = storage_result.cache_info.last_modified
         return response
 
     except MetatileNotFoundException:
