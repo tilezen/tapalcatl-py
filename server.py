@@ -139,11 +139,13 @@ def metatile_fetch(meta, cache_info):
     try:
         response = s3.get_object(**get_params)
 
+        # Strip the quotes that boto includes
+        quoteless_etag = response['ETag'][1:-1]
         result = StorageResponse(
             data=response['Body'].read(),
             cache_info=CacheInfo(
                 last_modified=response['LastModified'],
-                etag=None,
+                etag=quoteless_etag,
             )
         )
 
@@ -194,7 +196,7 @@ def retrieve_tile(meta, offset, cache_info):
         data=tile_data,
         cache_info=CacheInfo(
             last_modified=metatile_data.cache_info.last_modified,
-            etag=None,
+            etag=metatile_data.cache_info.etag,
         )
     )
 
@@ -220,8 +222,11 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         storage_result = retrieve_tile(meta, offset, request_cache_info)
 
         response = make_response(storage_result.data)
-        response.headers['Content-Type'] = MIME_TYPES.get(fmt)
-        response.headers['Last-Modified'] = storage_result.cache_info.last_modified
+        response.content_type = MIME_TYPES.get(fmt)
+        response.last_modified = storage_result.cache_info.last_modified
+        response.cache_control.max_age = current_app.config.get("CACHE_MAX_AGE")
+        response.cache_control.public = True
+        response.set_etag(storage_result.cache_info.etag)
         return response
 
     except MetatileNotFoundException:
