@@ -240,3 +240,8 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
     except UnknownMetatileException:
         current_app.logger.exception("Error fetching metatile")
         return "Metatile fetch problem", 500
+
+
+@app.route('/preview.html')
+def preview_html():
+    return app.send_static_file('preview.html')
