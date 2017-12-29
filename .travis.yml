@@ -1,1 +1,5 @@
 language: python
+install:
+  pipenv install --dev
+script:
+  python tests.py
