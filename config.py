@@ -1,6 +1,7 @@
 import os
 
 
+CORS_SEND_WILDCARD = True
 CACHE_MAX_AGE = int(os.environ.get("CACHE_MAX_AGE", '600'))
 S3_BUCKET = os.environ.get("S3_BUCKET")
 S3_PREFIX = os.environ.get("S3_PREFIX")
