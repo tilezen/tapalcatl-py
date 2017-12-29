@@ -116,6 +116,7 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
     return k[1:]
 
 
+@cached(lfu_cache)
 def metatile_fetch(meta, cache_info):
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
@@ -185,7 +186,6 @@ def extract_tile(metatile_bytes, offset):
         raise TileNotFoundInMetatile(e)
 
 
-@cached(lfu_cache)
 def retrieve_tile(meta, offset, cache_info):
     metatile_data = metatile_fetch(meta, cache_info)
     tile_data = extract_tile(metatile_data.data, offset)
