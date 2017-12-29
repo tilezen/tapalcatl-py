@@ -51,10 +51,14 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(9, 79, 116, 'zip'), meta)
         self.assertTileEquals(TileRequest(3, 5, 7, 'json'), offset)
 
+        # check that the "512px" 0/0/0 tile is accessible.
         meta, offset = meta_and_offset(TileRequest(0, 0, 0, 'json'), 2, 2)
         self.assertTileEquals(TileRequest(0, 0, 0, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 'json'), offset)
 
+        # check that when the metatile would be smaller than the world (i.e:
+        # zoom < 0) then it just stops at 0 and we get the offset to the 0/0/0
+        # tile.
         meta, offset = meta_and_offset(TileRequest(0, 0, 0, 'json'), 2, 1)
         self.assertTileEquals(TileRequest(0, 0, 0, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 'json'), offset)
