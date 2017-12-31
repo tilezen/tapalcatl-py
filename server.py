@@ -6,7 +6,7 @@ import math
 import zipfile
 from cachetools import LFUCache, cached
 from collections import namedtuple
-from cStringIO import StringIO
+from io import BytesIO
 from flask import Flask, current_app, make_response, request
 from flask_compress import Compress
 from flask_cors import CORS
@@ -100,7 +100,7 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
     )
 
     if include_hash:
-        h = hashlib.md5(k).hexdigest()[:5]
+        h = hashlib.md5(k.encode('utf8')).hexdigest()[:5]
         k = "/{hash}{suffix}".format(
             hash=h,
             suffix=k,
@@ -172,7 +172,7 @@ def parse_header_time(tstamp):
 
 
 def extract_tile(metatile_bytes, offset):
-    data = StringIO(metatile_bytes)
+    data = BytesIO(metatile_bytes)
     z = zipfile.ZipFile(data, 'r')
 
     offset_key = '{zoom}/{x}/{y}.{fmt}'.format(
@@ -206,6 +206,10 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
     requested_tile = TileRequest(z, x, y, fmt)
 
     tile_size = tile_pixel_size / 256
+    if tile_size != int(tile_size):
+        return abort(400, "Invalid tile size. %s is not a multiple of 256." % tile_pixel_size)
+
+    tile_size = int(tile_size)
 
     meta, offset = meta_and_offset(
         requested_tile,
