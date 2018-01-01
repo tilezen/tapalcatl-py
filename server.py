@@ -7,7 +7,7 @@ import zipfile
 from cachetools import LFUCache, cached
 from collections import namedtuple
 from io import BytesIO
-from flask import Flask, current_app, make_response, request
+from flask import Flask, current_app, make_response, render_template, request, url_for
 from flask_compress import Compress
 from flask_cors import CORS
 
@@ -249,4 +249,18 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
 
 @app.route('/preview.html')
 def preview_html():
-    return app.send_static_file('preview.html')
+    template_url = url_for(
+        'handle_tile',
+        tile_pixel_size='512',
+        z='111',
+        x='222',
+        y='333',
+        fmt='mvt',
+        _external=True,
+    )
+    template_url = template_url.replace('111', '{z}').replace('222', '{x}').replace('333', '{y}')
+
+    return render_template(
+        'preview.html',
+        tiles_template=template_url,
+    )
