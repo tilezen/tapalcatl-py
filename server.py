@@ -171,6 +171,7 @@ def parse_header_time(tstamp):
         return None
 
 
+@cached(lfu_cache)
 def extract_tile(metatile_bytes, offset):
     data = BytesIO(metatile_bytes)
     z = zipfile.ZipFile(data, 'r')
