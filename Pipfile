@@ -7,7 +7,8 @@ name = "pypi"
 
 [dev-packages]
 
-zappa = "*"
+# https://github.com/Miserlou/Zappa/issues/1262
+zappa = "==0.43.1"
 
 
 [packages]
