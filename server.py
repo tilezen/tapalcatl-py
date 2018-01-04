@@ -249,18 +249,6 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
 
 @app.route('/preview.html')
 def preview_html():
-    template_url = url_for(
-        'handle_tile',
-        tile_pixel_size='512',
-        z='111',
-        x='222',
-        y='333',
-        fmt='mvt',
-        _external=True,
-    )
-    template_url = template_url.replace('111', '{z}').replace('222', '{x}').replace('333', '{y}')
-
     return render_template(
         'preview.html',
-        tiles_template=template_url,
     )

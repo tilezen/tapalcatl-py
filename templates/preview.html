@@ -45,7 +45,7 @@
                 ],
                 sources: {
                     mapzen: {
-                        url: '{{ tiles_template }}',
+                        url: '{{ config.get("TILES_URL_BASE", "") }}/mapzen/vector/v1/512/all/{z}/{x}/{y}.mvt',
                         url_subdomains: ['a', 'b', 'c', 'd'],
                         url_params: null
                     }
