@@ -39,7 +39,10 @@
 
         var layer = Tangram.leafletLayer({
             scene: {
-                import: 'https://www.nextzen.org/carto/bubble-wrap-style-more-labels/7/bubble-wrap-style-more-labels.zip',
+                import: [
+                    'https://www.nextzen.org/carto/bubble-wrap-style/8/bubble-wrap-style.zip',
+                    'https://www.nextzen.org/carto/bubble-wrap-style/8/themes/label-10.zip'
+                ],
                 sources: {
                     mapzen: {
                         url: '{{ tiles_template }}',
