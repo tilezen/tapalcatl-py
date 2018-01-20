@@ -29,6 +29,7 @@ The important bits of configuration are set in `config.py` using environment var
 `S3_BUCKET` | Specifies the S3 bucket to use when requesting metatiles.
 `S3_PREFIX` | Specifies the (optional) S3 key prefix to use when requesting metatiles. Should not include trailing slash.
 `METATILE_SIZE` | The metatile size used when creating the metatiles you're reading from.
+`REQUESTER_PAYS` | A boolean flag in configuration for REQUESTER_PAYS. Set it to `true` to use a [requester pays](https://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html) bucket for metatiles.
 
 ## Running locally
 
