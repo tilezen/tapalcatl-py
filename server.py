@@ -120,6 +120,7 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
 def metatile_fetch(meta, cache_info):
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
+    requester_pays = current_app.config.get('REQUESTER_PAYS')
 
     s3_bucket = current_app.config.get('S3_BUCKET')
     s3_key = compute_key(s3_key_prefix, 'all', meta, include_hash)
@@ -135,6 +136,9 @@ def metatile_fetch(meta, cache_info):
 
     if cache_info.etag:
         get_params['IfNoneMatch'] = cache_info.etag
+
+    if requester_pays:
+        get_params['RequestPayer'] = 'requester'
 
     try:
         response = s3.get_object(**get_params)
