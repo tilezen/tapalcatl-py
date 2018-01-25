@@ -233,8 +233,10 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         response = make_response(storage_result.data)
         response.content_type = MIME_TYPES.get(fmt)
         response.last_modified = storage_result.cache_info.last_modified
-        response.cache_control.max_age = current_app.config.get("CACHE_MAX_AGE")
         response.cache_control.public = True
+        response.cache_control.max_age = current_app.config.get("CACHE_MAX_AGE")
+        if current_app.config.get("SHARED_CACHE_MAX_AGE"):
+            response.cache_control.s_maxage = current_app.config.get("SHARED_CACHE_MAX_AGE")
         response.set_etag(storage_result.cache_info.etag)
         return response
 
