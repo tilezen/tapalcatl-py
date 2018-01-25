@@ -47,7 +47,9 @@
                     mapzen: {
                         url: '{{ config.get("TILES_URL_BASE") or "" }}/mapzen/vector/v1/512/all/{z}/{x}/{y}.mvt',
                         url_subdomains: ['a', 'b', 'c', 'd'],
-                        url_params: null
+                        url_params: null,
+                        tile_size: 512,
+                        max_zoom: 15
                     }
                 }
             },
