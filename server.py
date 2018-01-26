@@ -206,7 +206,7 @@ def retrieve_tile(meta, offset, cache_info):
     )
 
 
-@app.route('/mapzen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
+@app.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
     requested_tile = TileRequest(z, x, y, fmt)
 
