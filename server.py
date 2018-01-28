@@ -14,19 +14,17 @@ from aws_xray_sdk.core import xray_recorder, patch_all
 from aws_xray_sdk.core.context import Context
 from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
-patch_all()
 
 app = Flask(__name__)
 app.config.from_object('config')
 cache = Cache(app)
 CORS(app)
 Compress(app)
-<<<<<<< HEAD
 boto_flask = Boto3(app)
-=======
 xray_recorder.configure(service='Tapalcatl Dev', sampling=False, context=Context())
 XRayMiddleware(app, xray_recorder)
->>>>>>> Add AWS X-Ray instrumentation
+
+patch_all()
 
 
 MIME_TYPES = {
@@ -64,7 +62,6 @@ def size_to_zoom(size):
     return math.log(size, 2)
 
 
-@xray_recorder.capture('calculate offset')
 def meta_and_offset(requested_tile, meta_size, tile_size,
                     metatile_max_detail_zoom=None):
     if not is_power_of_two(meta_size):
@@ -115,7 +112,6 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
     return meta, offset
 
 
-@xray_recorder.capture('compute s3 key')
 def compute_key(prefix, layer, meta_tile, include_hash=True):
     k = "/{layer}/{z}/{x}/{y}.{fmt}".format(
         layer=layer,
@@ -142,15 +138,17 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
     return k[1:]
 
 
-@cache.memoize()
 @xray_recorder.capture('fetch metatile')
+@cache.memoize()
 def metatile_fetch(meta, cache_info):
+    ss = xray_recorder.begin_subsegment('compute key')
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
     requester_pays = current_app.config.get('REQUESTER_PAYS')
 
     s3_bucket = current_app.config.get('S3_BUCKET')
     s3_key = compute_key(s3_key_prefix, 'all', meta, include_hash)
+    xray_recorder.end_subsegment()
 
     get_params = {
         "Bucket": s3_bucket,
@@ -167,10 +165,13 @@ def metatile_fetch(meta, cache_info):
         get_params['RequestPayer'] = 'requester'
 
     try:
+        ss = xray_recorder.begin_subsegment('get s3 object')
         response = boto_flask.clients['s3'].get_object(**get_params)
+        xray_recorder.end_subsegment()
 
         # Strip the quotes that boto includes
         quoteless_etag = response['ETag'][1:-1]
+        ss = xray_recorder.begin_subsegment('read s3 object')
         result = StorageResponse(
             data=response['Body'].read(),
             cache_info=CacheInfo(
@@ -178,6 +179,7 @@ def metatile_fetch(meta, cache_info):
                 etag=quoteless_etag,
             )
         )
+        xray_recorder.end_subsegment()
 
         return result
     except botocore.exceptions.ClientError as e:
