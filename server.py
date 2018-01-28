@@ -7,7 +7,7 @@ import zipfile
 from cachetools import LFUCache, cached
 from collections import namedtuple
 from io import BytesIO
-from flask import Flask, current_app, make_response, render_template, request, url_for
+from flask import Flask, current_app, make_response, render_template, request, abort
 from flask_compress import Compress
 from flask_cors import CORS
 
@@ -54,7 +54,8 @@ def size_to_zoom(size):
     return math.log(size, 2)
 
 
-def meta_and_offset(requested_tile, meta_size, tile_size):
+def meta_and_offset(requested_tile, meta_size, tile_size,
+                    metatile_max_detail_zoom=None):
     if not is_power_of_two(meta_size):
         raise ValueError("Metatile size %s is not a power of two" % meta_size)
     if not is_power_of_two(tile_size):
@@ -74,6 +75,19 @@ def meta_and_offset(requested_tile, meta_size, tile_size):
         meta = TileRequest(0, 0, 0, 'zip')
         offset = TileRequest(0, 0, 0, requested_tile.format)
     else:
+
+        # allows setting a maximum detail level beyond which all features are
+        # present in the tile and requests with tile_size larger than are
+        # available can be satisfied with "smaller" tiles that are present.
+        if metatile_max_detail_zoom and \
+           requested_tile.z - delta_z > metatile_max_detail_zoom:
+            # the call to min() is here to clamp the size of the offset - the
+            # idea being that it's better to request a metatile that isn't
+            # present and 404, rather than request one that is, pay the cost
+            # of unzipping it, and find it doesn't contain the offset.
+            delta_z = min(requested_tile.z - metatile_max_detail_zoom,
+                          int(meta_zoom))
+
         meta = TileRequest(
             requested_tile.z - delta_z,
             requested_tile.x >> delta_z,
@@ -220,6 +234,7 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         requested_tile,
         current_app.config.get('METATILE_SIZE'),
         tile_size,
+        metatile_max_detail_zoom=current_app.config.get('METATILE_MAX_DETAIL_ZOOM'),
     )
 
     request_cache_info = CacheInfo(
