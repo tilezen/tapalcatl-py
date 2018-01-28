@@ -7,7 +7,7 @@ import zipfile
 from cachetools import LFUCache, cached
 from collections import namedtuple
 from io import BytesIO
-from flask import Flask, current_app, make_response, render_template, request, url_for
+from flask import Flask, current_app, make_response, render_template, request, abort
 from flask_compress import Compress
 from flask_cors import CORS
 
