@@ -1,4 +1,3 @@
-import boto3
 import botocore
 import dateutil.parser
 import hashlib
@@ -7,6 +6,7 @@ import zipfile
 from collections import namedtuple
 from io import BytesIO
 from flask import Flask, current_app, make_response, render_template, request, abort
+from flask_boto3 import Boto3
 from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
@@ -17,6 +17,7 @@ app.config.from_object('config')
 cache = Cache(app)
 CORS(app)
 Compress(app)
+boto_flask = Boto3(app)
 
 
 MIME_TYPES = {
@@ -139,7 +140,6 @@ def metatile_fetch(meta, cache_info):
     s3_bucket = current_app.config.get('S3_BUCKET')
     s3_key = compute_key(s3_key_prefix, 'all', meta, include_hash)
 
-    s3 = boto3.client('s3')
     get_params = {
         "Bucket": s3_bucket,
         "Key": s3_key,
@@ -155,7 +155,7 @@ def metatile_fetch(meta, cache_info):
         get_params['RequestPayer'] = 'requester'
 
     try:
-        response = s3.get_object(**get_params)
+        response = boto_flask.clients['s3'].get_object(**get_params)
 
         # Strip the quotes that boto includes
         quoteless_etag = response['ETag'][1:-1]
