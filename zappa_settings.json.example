@@ -3,7 +3,7 @@
         "app_function": "server.app",
         "aws_region": "us-east-1",
         "project_name": "tapalcatlpy",
-        "runtime": "python2.7",
+        "runtime": "python3.6",
         "s3_bucket": "replace-with-your-own-zappa-deploys-bucket",
         "route53_enabled": false,
         "memory_size": 128,
