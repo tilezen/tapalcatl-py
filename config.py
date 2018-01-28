@@ -27,5 +27,5 @@ COMPRESS_MIMETYPES = [
     'application/json',
 ]
 
-CACHE_TYPE = os.environ.get('CACHE_TYPE')
+CACHE_TYPE = os.environ.get('CACHE_TYPE', 'null')
 CACHE_DIR = os.environ.get('CACHE_DIR')
