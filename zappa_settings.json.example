@@ -14,7 +14,8 @@
             "S3_PREFIX": "20171221",
             "S3_BUCKET": "vector-tiles-prod",
             "REQUESTER_PAYS": "true",
-            "METATILE_SIZE": "4"
+            "METATILE_SIZE": "4",
+            "METATILE_MAX_DETAIL_ZOOM": "14"
         }
     },
     "prod": {
@@ -28,7 +29,8 @@
             "S3_PREFIX": "20171221",
             "S3_BUCKET": "vector-tiles-prod",
             "REQUESTER_PAYS": "true",
-            "METATILE_SIZE": "4"
+            "METATILE_SIZE": "4",
+            "METATILE_MAX_DETAIL_ZOOM": "14"
         }
     }
 }

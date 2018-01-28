@@ -63,6 +63,47 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(0, 0, 0, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 'json'), offset)
 
+    def test_max_detail_zoom(self):
+        from server import meta_and_offset
+
+        def check_overzoom(request, meta_z, offset_z):
+            tile_px, request_z = map(int, request.split("/"))
+            tile_size = tile_px // 256
+            meta, offset = meta_and_offset(
+                TileRequest(request_z, 0, 0, 'json'), 4, tile_size,
+                metatile_max_detail_zoom=14)
+            self.assertTileEquals(TileRequest(meta_z, 0, 0, 'zip'), meta)
+            self.assertTileEquals(TileRequest(offset_z, 0, 0, 'json'), offset)
+
+        # check that when the requested tile is past the max level of detail,
+        # then it falls back to "smaller" tiles.
+        #
+        # base tile:
+        check_overzoom("1024/14", meta_z=14, offset_z=0)
+
+        # first fallback level, actually returning a "512px" tile, rather than
+        # the requested "1024px", but it's at the max detail level, so the
+        # content is the same.
+        check_overzoom("1024/15", meta_z=14, offset_z=1)
+
+        # second fallback level, actually returning a "256px" tile.
+        check_overzoom("1024/16", meta_z=14, offset_z=2)
+
+        # returning a "256px" tile for a "512px" request at the maximum
+        # detail level.
+        check_overzoom("512/16", meta_z=14, offset_z=2)
+
+        # there is no third level of fallback (with the metatile size tested
+        # here, at least), so it should clamp to the minimum tile size. this
+        # will probably result in a 404 anyway.
+        check_overzoom("1024/17", meta_z=15, offset_z=2)
+
+        # check that passing None (the default) as the max detail zoom
+        # disables this behaviour.
+        meta, offset = meta_and_offset(TileRequest(16, 0, 0, 'json'), 4, 4)
+        self.assertTileEquals(TileRequest(16, 0, 0, 'zip'), meta)
+        self.assertTileEquals(TileRequest(0, 0, 0, 'json'), offset)
+
     def test_compute_key(self):
         from server import compute_key
 
