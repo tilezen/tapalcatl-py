@@ -8,6 +8,8 @@
         "route53_enabled": false,
         "memory_size": 128,
         "environment_variables": {
+            "CACHE_TYPE": "filesystem",
+            "CACHE_DIR": "/tmp/filecache",
             "CACHE_MAX_AGE": "3600",
             "SHARED_CACHE_MAX_AGE": "1800",
             "TILES_URL_BASE": "/dev",
@@ -23,6 +25,8 @@
         "debug": false,
         "log_level": "WARN",
         "environment_variables": {
+            "CACHE_TYPE": "filesystem",
+            "CACHE_DIR": "/tmp/filecache",
             "CACHE_MAX_AGE": "259200",
             "SHARED_CACHE_MAX_AGE": "21600",
             "TILES_URL_BASE": "https://{s}.tiles.nextzen.org",
