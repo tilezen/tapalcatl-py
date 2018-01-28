@@ -4,16 +4,17 @@ import dateutil.parser
 import hashlib
 import math
 import zipfile
-from cachetools import LFUCache, cached
 from collections import namedtuple
 from io import BytesIO
 from flask import Flask, current_app, make_response, render_template, request, abort
+from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
 
 
 app = Flask(__name__)
 app.config.from_object('config')
+cache = Cache(app)
 CORS(app)
 Compress(app)
 
@@ -27,7 +28,6 @@ MIME_TYPES = {
 TileRequest = namedtuple('TileRequest', ['z', 'x', 'y', 'format'])
 CacheInfo = namedtuple('CacheInfo', ['last_modified', 'etag'])
 StorageResponse = namedtuple('StorageResponse', ['data', 'cache_info'])
-lfu_cache = LFUCache(50)
 
 
 class MetatileNotModifiedException(Exception):
@@ -130,7 +130,7 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
     return k[1:]
 
 
-@cached(lfu_cache)
+@cache.memoize()
 def metatile_fetch(meta, cache_info):
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
@@ -189,7 +189,7 @@ def parse_header_time(tstamp):
         return None
 
 
-@cached(lfu_cache)
+@cache.memoize()
 def extract_tile(metatile_bytes, offset):
     data = BytesIO(metatile_bytes)
     z = zipfile.ZipFile(data, 'r')

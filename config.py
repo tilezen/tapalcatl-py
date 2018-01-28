@@ -21,7 +21,11 @@ METATILE_SIZE = int(os.environ.get("METATILE_SIZE", '4'))
 METATILE_MAX_DETAIL_ZOOM = int(os.environ.get("METATILE_MAX_DETAIL_ZOOM")) if os.environ.get("METATILE_MAX_DETAIL_ZOOM") else None
 INCLUDE_HASH = os.environ.get("INCLUDE_HASH", 'true') == 'true'
 REQUESTER_PAYS = os.environ.get("REQUESTER_PAYS", 'false') == 'true'
+
 COMPRESS_MIMETYPES = [
     'application/x-protobuf',
     'application/json',
 ]
+
+CACHE_TYPE = os.environ.get('CACHE_TYPE')
+CACHE_DIR = os.environ.get('CACHE_DIR')
