@@ -1,0 +1,34 @@
+{
+    "dev": {
+        "app_function": "server.app",
+        "aws_region": "us-east-1",
+        "project_name": "tapalcatlpy",
+        "runtime": "python2.7",
+        "s3_bucket": "replace-with-your-own-zappa-deploys-bucket",
+        "route53_enabled": false,
+        "memory_size": 128,
+        "environment_variables": {
+            "CACHE_MAX_AGE": "3600",
+            "SHARED_CACHE_MAX_AGE": "1800",
+            "TILES_URL_BASE": "/dev",
+            "S3_PREFIX": "20171221",
+            "S3_BUCKET": "vector-tiles-prod",
+            "REQUESTER_PAYS": "true",
+            "METATILE_SIZE": "4"
+        }
+    },
+    "prod": {
+        "extends": "dev",
+        "debug": false,
+        "log_level": "WARN",
+        "environment_variables": {
+            "CACHE_MAX_AGE": "259200",
+            "SHARED_CACHE_MAX_AGE": "21600",
+            "TILES_URL_BASE": "https://{s}.tiles.nextzen.org",
+            "S3_PREFIX": "20171221",
+            "S3_BUCKET": "vector-tiles-prod",
+            "REQUESTER_PAYS": "true",
+            "METATILE_SIZE": "4"
+        }
+    }
+}
