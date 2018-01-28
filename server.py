@@ -10,14 +10,23 @@ from flask_boto3 import Boto3
 from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
+from aws_xray_sdk.core import xray_recorder, patch_all
+from aws_xray_sdk.core.context import Context
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 
+patch_all()
 
 app = Flask(__name__)
 app.config.from_object('config')
 cache = Cache(app)
 CORS(app)
 Compress(app)
+<<<<<<< HEAD
 boto_flask = Boto3(app)
+=======
+xray_recorder.configure(service='Tapalcatl Dev', sampling=False, context=Context())
+XRayMiddleware(app, xray_recorder)
+>>>>>>> Add AWS X-Ray instrumentation
 
 
 MIME_TYPES = {
@@ -55,6 +64,7 @@ def size_to_zoom(size):
     return math.log(size, 2)
 
 
+@xray_recorder.capture('calculate offset')
 def meta_and_offset(requested_tile, meta_size, tile_size,
                     metatile_max_detail_zoom=None):
     if not is_power_of_two(meta_size):
@@ -105,6 +115,7 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
     return meta, offset
 
 
+@xray_recorder.capture('compute s3 key')
 def compute_key(prefix, layer, meta_tile, include_hash=True):
     k = "/{layer}/{z}/{x}/{y}.{fmt}".format(
         layer=layer,
@@ -132,6 +143,7 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
 
 
 @cache.memoize()
+@xray_recorder.capture('fetch metatile')
 def metatile_fetch(meta, cache_info):
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
@@ -190,6 +202,7 @@ def parse_header_time(tstamp):
 
 
 @cache.memoize()
+@xray_recorder.capture('extract tile from metatile')
 def extract_tile(metatile_bytes, offset):
     data = BytesIO(metatile_bytes)
     z = zipfile.ZipFile(data, 'r')
@@ -220,6 +233,7 @@ def retrieve_tile(meta, offset, cache_info):
     )
 
 
+@xray_recorder.capture('handle tile')
 @app.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
     requested_tile = TileRequest(z, x, y, fmt)
