@@ -14,7 +14,7 @@ zappa = "*"
 
 flask = "*"
 "flask-boto3" = "*"
-flask-caching = "*"
 flask-compress = "*"
 flask-cors = "*"
 python-dateutil = "*"
+cachetools = "*"

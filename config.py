@@ -28,7 +28,3 @@ COMPRESS_MIMETYPES = [
     'application/x-protobuf',
     'application/json',
 ]
-
-CACHE_TYPE = os.environ.get('CACHE_TYPE', 'null')
-CACHE_DIR = os.environ.get('CACHE_DIR')
-CACHE_THRESHOLD = int(os.environ.get('CACHE_THRESHOLD')) if os.environ.get('CACHE_THRESHOLD') else None

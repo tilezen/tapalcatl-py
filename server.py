@@ -1,23 +1,25 @@
 import botocore
+import cachetools
 import dateutil.parser
 import hashlib
 import math
+import sys
+import time
 import zipfile
 from collections import namedtuple
 from io import BytesIO
 from flask import Flask, current_app, make_response, render_template, request, abort
 from flask_boto3 import Boto3
-from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
 
 
 app = Flask(__name__)
 app.config.from_object('config')
-cache = Cache(app)
 CORS(app)
 Compress(app)
 boto_flask = Boto3(app)
+metatile_lfu = cachetools.LFUCache(100e6, getsizeof=lambda i: sys.getsizeof(i.data)) # ~100 MB
 
 
 MIME_TYPES = {
@@ -131,8 +133,12 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
     return k[1:]
 
 
-@cache.memoize()
 def metatile_fetch(meta, cache_info):
+    cached = metatile_lfu.get(meta)
+    if cached:
+        app.logger.info("%s: Using cached metatile. Cache size is %0.1f MB", meta, metatile_lfu.currsize / 1000 / 1000)
+        return cached
+
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
     requester_pays = current_app.config.get('REQUESTER_PAYS')
@@ -155,6 +161,7 @@ def metatile_fetch(meta, cache_info):
         get_params['RequestPayer'] = 'requester'
 
     try:
+        a = time.time()
         response = boto_flask.clients['s3'].get_object(**get_params)
 
         # Strip the quotes that boto includes
@@ -166,6 +173,10 @@ def metatile_fetch(meta, cache_info):
                 etag=quoteless_etag,
             )
         )
+        duration = time.time() - a
+
+        metatile_lfu[meta] = result
+        app.logger.info("%s: Caching metatile that took %0.2fsec to get from S3. %s content-length", meta, duration, response['ContentLength'])
 
         return result
     except botocore.exceptions.ClientError as e:
@@ -189,7 +200,6 @@ def parse_header_time(tstamp):
         return None
 
 
-@cache.memoize()
 def extract_tile(metatile_bytes, offset):
     data = BytesIO(metatile_bytes)
     z = zipfile.ZipFile(data, 'r')
