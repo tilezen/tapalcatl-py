@@ -252,9 +252,11 @@ def retrieve_tile(meta, offset, cache_info):
 
 
 @tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
-def handle_tile(tile_pixel_size, z, x, y, fmt):
+@tile_bp.route('/tilezen/vector/v1/all/<int:z>/<int:x>/<int:y>.<fmt>')
+def handle_tile(z, x, y, fmt, tile_pixel_size=None):
     requested_tile = TileRequest(z, x, y, fmt)
 
+    tile_pixel_size = tile_pixel_size or 256
     tile_size = tile_pixel_size / 256
     if tile_size != int(tile_size):
         return abort(400, "Invalid tile size. %s is not a multiple of 256." % tile_pixel_size)
