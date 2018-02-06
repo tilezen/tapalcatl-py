@@ -2,24 +2,42 @@ import botocore
 import cachetools
 import dateutil.parser
 import hashlib
+import logging
 import math
 import sys
 import time
 import zipfile
 from collections import namedtuple
 from io import BytesIO
-from flask import Flask, current_app, make_response, render_template, request, abort
+from flask import Blueprint, Flask, current_app, make_response, render_template, request, abort
 from flask_boto3 import Boto3
 from flask_compress import Compress
 from flask_cors import CORS
 
 
-app = Flask(__name__)
-app.config.from_object('config')
-CORS(app)
-Compress(app)
-boto_flask = Boto3(app)
-metatile_lfu = cachetools.LFUCache(100e6, getsizeof=lambda i: sys.getsizeof(i.data)) # ~100 MB
+tile_bp = Blueprint('tiles', __name__)
+boto_flask = Boto3()
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object('config')
+    CORS(app)
+    Compress(app)
+    boto_flask.init_app(app)
+    app.extensions['metatile_lfu'] = cachetools.LFUCache(100e6, getsizeof=lambda i: sys.getsizeof(i.data)) # ~100 MB
+
+    @app.before_first_request
+    def setup_logging():
+        if not app.debug:
+            # In production mode, add log handler to sys.stderr.
+            app.logger.addHandler(logging.StreamHandler())
+            app.logger.setLevel(logging.INFO)
+        app.logger.info("Before first request is running")
+
+    app.register_blueprint(tile_bp)
+
+    return app
 
 
 MIME_TYPES = {
@@ -31,6 +49,8 @@ MIME_TYPES = {
 TileRequest = namedtuple('TileRequest', ['z', 'x', 'y', 'format'])
 CacheInfo = namedtuple('CacheInfo', ['last_modified', 'etag'])
 StorageResponse = namedtuple('StorageResponse', ['data', 'cache_info'])
+
+
 
 
 class MetatileNotModifiedException(Exception):
@@ -134,9 +154,10 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
 
 
 def metatile_fetch(meta, cache_info):
-    cached = metatile_lfu.get(meta)
+    cache = current_app.extensions['metatile_lfu']
+    cached = cache.get(meta)
     if cached:
-        app.logger.info("%s: Using cached metatile. Cache size is %0.1f MB", meta, metatile_lfu.currsize / 1000 / 1000)
+        current_app.logger.info("%s: Using cached metatile. Cache size is %0.1f MB", meta, cache.currsize / 1000 / 1000)
         return cached
 
     s3_key_prefix = current_app.config.get('S3_PREFIX')
@@ -173,10 +194,10 @@ def metatile_fetch(meta, cache_info):
                 etag=quoteless_etag,
             )
         )
-        duration = time.time() - a
+        duration = (time.time() - a) * 1000
 
-        metatile_lfu[meta] = result
-        app.logger.info("%s: Caching metatile that took %0.2fsec to get from S3. %s content-length", meta, duration, response['ContentLength'])
+        cache[meta] = result
+        current_app.logger.info("%s: Caching metatile that took %0.1fms to get from S3. %s content-length", meta, duration, response['ContentLength'])
 
         return result
     except botocore.exceptions.ClientError as e:
@@ -230,7 +251,7 @@ def retrieve_tile(meta, offset, cache_info):
     )
 
 
-@app.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
+@tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(tile_pixel_size, z, x, y, fmt):
     requested_tile = TileRequest(z, x, y, fmt)
 
@@ -278,7 +299,7 @@ def handle_tile(tile_pixel_size, z, x, y, fmt):
         return "Metatile fetch problem", 500
 
 
-@app.route('/preview.html')
+@tile_bp.route('/preview.html')
 def preview_html():
     return render_template(
         'preview.html',

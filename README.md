@@ -37,7 +37,7 @@ The important bits of configuration are set in `config.py` using environment var
 Once you have the dependencies installed as described above, you can use the Flask command line tool to run the server locally.
 
 ```
-FLASK_DEBUG=true FLASK_APP=server.py flask run
+FLASK_DEBUG=true FLASK_APP=wsgi_server.py flask run
 ```
 
 The `FLASK_` environment variables specified before the `flask run` command are used to enable debug mode (`FLASK_DEBUG`) and to tell Flask's command line helper where the app code is (`FLASK_APP`). You can also include the other environment variables from the Configuration section here, too. When I run this locally to develop I run:
@@ -45,7 +45,7 @@ The `FLASK_` environment variables specified before the `flask run` command are 
 ```
 AWS_PROFILE=nextzen \
 FLASK_DEBUG=true \
-FLASK_APP=server.py \
+FLASK_APP=wsgi_server.py \
 S3_PREFIX=20171221 \
 S3_BUCKET=redacted-bucket-name \
 METATILE_SIZE=4 \
