@@ -16,7 +16,12 @@ SHARED_CACHE_MAX_AGE = int(os.environ.get("SHARED_CACHE_MAX_AGE", '600'))
 
 CACHE_TYPE = os.environ.get('CACHE_TYPE', 'null')
 CACHE_NO_NULL_WARNING = True
-CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+# Expose some of the caching config via environment variables
+# so we can have more freedom to configure this in-situ.
+CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL')
+CACHE_THRESHOLD = os.environ.get('CACHE_THRESHOLD')
+CACHE_KEY_PREFIX = os.environ.get('CACHE_KEY_PREFIX')
+CACHE_DIR = os.environ.get('CACHE_DIR')
 
 METATILE_CACHE_SIZE = int(os.environ.get('METATILE_CACHE_SIZE', 0)) * 1000 * 1000
 TILES_URL_BASE = os.environ.get('TILES_URL_BASE')
