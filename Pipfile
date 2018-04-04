@@ -13,7 +13,7 @@ zappa = "*"
 [packages]
 
 flask = "*"
+flask-caching = "*"
 flask-compress = "*"
 flask-cors = "*"
 python-dateutil = "*"
-cachetools = "*"

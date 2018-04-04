@@ -1,6 +1,5 @@
 import boto3
 import botocore
-import cachetools
 import dateutil.parser
 import hashlib
 import logging
@@ -11,11 +10,13 @@ import zipfile
 from collections import namedtuple
 from io import BytesIO
 from flask import Blueprint, Flask, current_app, make_response, render_template, request, abort
+from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
 
 
 tile_bp = Blueprint('tiles', __name__)
+cache = Cache()
 
 
 def create_app():
@@ -23,6 +24,7 @@ def create_app():
     app.config.from_object('config')
     CORS(app)
     Compress(app)
+    cache.init_app(app)
     app.boto_s3 = boto3.client('s3')
 
     @app.before_first_request
@@ -151,6 +153,11 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
 
 
 def metatile_fetch(meta, cache_info):
+    cached = cache.get(meta)
+    if cached:
+        current_app.logger.info("%s: Using a cached metatile", meta)
+        return cached
+
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
     requester_pays = current_app.config.get('REQUESTER_PAYS')
@@ -188,6 +195,7 @@ def metatile_fetch(meta, cache_info):
         duration = (time.time() - a) * 1000
 
         current_app.logger.info("%s: Took %0.1fms to get %s byte metatile from S3", meta, duration, response['ContentLength'])
+        cache.set(meta, result)
 
         return result
     except botocore.exceptions.ClientError as e:
