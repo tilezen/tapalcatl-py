@@ -301,8 +301,8 @@ def handle_tile(z, x, y, fmt, tile_pixel_size=None):
         return "Metatile fetch problem", 500
 
 
-@tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/tiles.<fmt>.json')
-@tile_bp.route('/tilezen/vector/v1/all/tiles.<fmt>.json')
+@tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/tilejson.<fmt>.json')
+@tile_bp.route('/tilezen/vector/v1/all/tilejson.<fmt>.json')
 def tilejson(fmt, tile_pixel_size=None):
     tile_size_url_part = ''
 
