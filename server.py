@@ -301,6 +301,31 @@ def handle_tile(z, x, y, fmt, tile_pixel_size=None):
         return "Metatile fetch problem", 500
 
 
+@tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/tiles.<fmt>.json')
+@tile_bp.route('/tilezen/vector/v1/all/tiles.<fmt>.json')
+def tilejson(fmt, tile_pixel_size=None):
+    tile_size_url_part = ''
+
+    if tile_pixel_size and (tile_pixel_size % 256 != 0):
+        return abort(400, "Invalid tile size. %s is not a multiple of 256." % tile_pixel_size)
+
+    if tile_pixel_size:
+        tile_size_url_part = '/%s' % tile_pixel_size
+
+    if fmt not in MIME_TYPES:
+        return abort(400, "Invalid tile format. Pick one of %s." % MIME_TYPES.keys())
+
+    rendered_template = render_template(
+        'tilejson.json',
+        tile_size_url_part=tile_size_url_part,
+        fmt=fmt,
+    )
+
+    resp = make_response(rendered_template)
+    resp.headers = {'Content-Type': 'application/json'}
+    return resp
+
+
 @tile_bp.route('/preview.html')
 def preview_html():
     return render_template(
