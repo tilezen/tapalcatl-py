@@ -14,10 +14,13 @@ CACHE_MAX_AGE = int(os.environ.get("CACHE_MAX_AGE", '1200'))
 # http://werkzeug.pocoo.org/docs/0.14/datastructures/#werkzeug.datastructures.ResponseCacheControl.s_maxage
 SHARED_CACHE_MAX_AGE = int(os.environ.get("SHARED_CACHE_MAX_AGE", '600'))
 
+CACHE_TYPE = os.environ.get('CACHE_TYPE', 'null')
+CACHE_NO_NULL_WARNING = True
+CACHE_REDIS_URL = os.environ.get('REDIS_URL')
+
 METATILE_CACHE_SIZE = int(os.environ.get('METATILE_CACHE_SIZE', 0)) * 1000 * 1000
 TILES_URL_BASE = os.environ.get('TILES_URL_BASE')
 TILES_PREVIEW_API_KEY = os.environ.get('TILES_PREVIEW_API_KEY')
-BOTO3_SERVICES = ['s3']
 S3_BUCKET = os.environ.get("S3_BUCKET")
 S3_PREFIX = os.environ.get("S3_PREFIX")
 METATILE_SIZE = int(os.environ.get("METATILE_SIZE", '4'))

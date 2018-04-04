@@ -1,5 +1,5 @@
+import boto3
 import botocore
-import cachetools
 import dateutil.parser
 import hashlib
 import logging
@@ -10,13 +10,13 @@ import zipfile
 from collections import namedtuple
 from io import BytesIO
 from flask import Blueprint, Flask, current_app, make_response, render_template, request, abort
-from flask_boto3 import Boto3
+from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
 
 
 tile_bp = Blueprint('tiles', __name__)
-boto_flask = Boto3()
+cache = Cache()
 
 
 def create_app():
@@ -24,8 +24,8 @@ def create_app():
     app.config.from_object('config')
     CORS(app)
     Compress(app)
-    boto_flask.init_app(app)
-    app.extensions['metatile_lfu'] = cachetools.LFUCache(100e6, getsizeof=lambda i: sys.getsizeof(i.data)) # ~100 MB
+    cache.init_app(app)
+    app.boto_s3 = boto3.client('s3')
 
     @app.before_first_request
     def setup_logging():
@@ -33,7 +33,6 @@ def create_app():
             # In production mode, add log handler to sys.stderr.
             app.logger.addHandler(logging.StreamHandler())
             app.logger.setLevel(logging.INFO)
-        app.logger.info("Before first request is running")
 
     app.register_blueprint(tile_bp)
 
@@ -154,10 +153,9 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
 
 
 def metatile_fetch(meta, cache_info):
-    cache = current_app.extensions['metatile_lfu']
     cached = cache.get(meta)
     if cached:
-        current_app.logger.info("%s: Using cached metatile. Cache size is %0.1f MB", meta, cache.currsize / 1000 / 1000)
+        current_app.logger.info("%s: Using a cached metatile", meta)
         return cached
 
     s3_key_prefix = current_app.config.get('S3_PREFIX')
@@ -183,7 +181,7 @@ def metatile_fetch(meta, cache_info):
 
     try:
         a = time.time()
-        response = boto_flask.clients['s3'].get_object(**get_params)
+        response = current_app.boto_s3.get_object(**get_params)
 
         # Strip the quotes that boto includes
         quoteless_etag = response['ETag'][1:-1]
@@ -196,8 +194,8 @@ def metatile_fetch(meta, cache_info):
         )
         duration = (time.time() - a) * 1000
 
-        cache[meta] = result
-        current_app.logger.info("%s: Caching metatile that took %0.1fms to get from S3. %s content-length", meta, duration, response['ContentLength'])
+        current_app.logger.info("%s: Took %0.1fms to get %s byte metatile from S3", meta, duration, response['ContentLength'])
+        cache.set(meta, result)
 
         return result
     except botocore.exceptions.ClientError as e:
