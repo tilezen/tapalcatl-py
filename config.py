@@ -23,7 +23,6 @@ CACHE_THRESHOLD = os.environ.get('CACHE_THRESHOLD')
 CACHE_KEY_PREFIX = os.environ.get('CACHE_KEY_PREFIX')
 CACHE_DIR = os.environ.get('CACHE_DIR')
 
-METATILE_CACHE_SIZE = int(os.environ.get('METATILE_CACHE_SIZE', 0)) * 1000 * 1000
 TILES_URL_BASE = os.environ.get('TILES_URL_BASE')
 TILES_PREVIEW_API_KEY = os.environ.get('TILES_PREVIEW_API_KEY')
 S3_BUCKET = os.environ.get("S3_BUCKET")
