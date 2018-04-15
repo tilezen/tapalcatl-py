@@ -19,7 +19,7 @@ CACHE_NO_NULL_WARNING = True
 # Expose some of the caching config via environment variables
 # so we can have more freedom to configure this in-situ.
 CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL')
-CACHE_THRESHOLD = os.environ.get('CACHE_THRESHOLD')
+CACHE_THRESHOLD = int(os.environ.get("CACHE_THRESHOLD")) if os.environ.get("CACHE_THRESHOLD") else None
 CACHE_KEY_PREFIX = os.environ.get('CACHE_KEY_PREFIX')
 CACHE_DIR = os.environ.get('CACHE_DIR')
 
