@@ -69,3 +69,19 @@ This server can run in a normal WSGI environment (on Heroku, with gunicorn, etc.
    ```
 
 1. Once Zappa deploys your code, it will not work until you set the configuration variables mentioned in the Configuration section above. You can set those via [your Zappa configuration file](https://github.com/Miserlou/Zappa#remote-environment-variables) or on the [AWS Lambda console](https://console.aws.amazon.com/lambda/home).
+
+### Lambda Gotchas
+
+Confusingly, Lambda deploys your function to an endpoint backed by CloudFront that [does not support caching](https://forums.aws.amazon.com/thread.jspa?threadID=195290#646425). Additionally, because of the way API Gateway uses the `Host` header, it's difficult to stick a CloudFront distribution in front of your API Gateway endpoint and have it cache the API Gateway response. AWS's workaround for this is to [make your API Gateway use a "regional" endpoint](https://forums.aws.amazon.com/ann.jspa?annID=5101) and stick a CloudFront distribution in front of that endpoint. This helps tapalcatl-py's usecase because your metatile S3 bucket will probably be in a single region and you want to run your Lambda next to that bucket as much as possible to reduce latency.
+
+Here's how to use a switch your existing tapalcatl-py deploy into a regional endpoint and add a CloudFront distribution that will cache your responses:
+
+1. Make sure you configured Zappa to deploy tapalcatl-py to the same region as your metatile bucket (the public, requester-pays metatile bucket is in `us-east-1`)
+
+1. Open your AWS Console and browse to [the API Gateway section](https://console.aws.amazon.com/apigateway/home). Click on the gear next to your tapalcatl-py deployment. At the bottom of the expanded box for your deployment, you should see an Endpoint Configuration section with a drop-down currently showing Edge Optimized. Change that to "Regional" and click Save.
+
+1. Next you'll need to find your "Invoke URL" by clicking the name of the API Gateway deployment to the left of the gear. On the left, click "Stages". Click the single stage listed under the "Stages" listing. At the top of the resulting page is an "Invoke URL" in a blue box. Note that URL or copy it into your computer's clipboard.
+
+1. Now head over to [the CloudFront section](https://console.aws.amazon.com/cloudfront/home) of the console. Create a new CloudFront distribution, click Get Started under the Web section, and paste the Invoke URL from API Gateway into the "Origin Domain Name" field. The Origin Path and Origin ID fields should auto-populate. You can leave the rest of the options at their default and continue to click Create Distribution.
+
+1. The resulting distribution will correctly cache the output of your tapalcatl-py deployment. You can increase the cache hit rate by increasing the `CACHE_MAX_AGE` and `SHARED_CACHE_MAX_AGE` [settings in `config.py`](https://github.com/tilezen/tapalcatl-py/blob/master/config.py#L9).
