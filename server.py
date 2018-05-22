@@ -194,7 +194,7 @@ def metatile_fetch(meta, cache_info):
         )
         duration = (time.time() - a) * 1000
 
-        current_app.logger.info("%s: Took %0.1fms to get %s byte metatile from S3", meta, duration, response['ContentLength'])
+        current_app.logger.info("%s: Took %0.1fms to get %s byte metatile from s3://%s/%s", meta, duration, response['ContentLength'], s3_bucket, s3_key)
         cache.set(meta, result)
 
         return result
