@@ -31,7 +31,9 @@
     <script>
 
         var map = L.Nextzen.map('map', {
+            {%- if config.get("TILES_PREVIEW_API_KEY") -%}
             apiKey: '{{ config.get("TILES_PREVIEW_API_KEY") }}',
+            {%- endif -%}
             attribution: '<a href="https://github.com/tangrams" target="_blank">Tangram</a> | <a href="http://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a> | <a href="https://www.nextzen.org/" target="_blank">Nextzen</a>',
             tangramOptions: {
                 scene: {
@@ -44,7 +46,9 @@
                             url: '{{ config.get("TILES_URL_BASE") or "" }}/tilezen/vector/v1/512/all/{z}/{x}/{y}.mvt',
                             url_subdomains: ['a', 'b', 'c', 'd'],
                             url_params: {
+                                {%- if config.get("TILES_PREVIEW_API_KEY") -%}
                                 api_key: '{{ config.get("TILES_PREVIEW_API_KEY") }}'
+                                {%- endif -%}
                             },
                             tile_size: 512,
                             max_zoom: 16
