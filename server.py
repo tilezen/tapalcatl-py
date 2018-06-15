@@ -326,7 +326,8 @@ def tilejson(fmt, tile_pixel_size=None):
 
 @tile_bp.route('/health_check')
 def health_check():
-    return handle_tile(0, 0, 0, 'mvt', tile_pixel_size=256)
+    handle_tile(0, 0, 0, 'mvt', tile_pixel_size=256)
+    return 'OK'
 
 
 @tile_bp.route('/preview.html')
