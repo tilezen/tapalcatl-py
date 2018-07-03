@@ -11,8 +11,10 @@ While looking at [this repository about Go on AWS Lambda](https://github.com/eaw
 We use [Pipenv](http://pipenv.readthedocs.io/en/latest/) to manage dependencies. To develop on this software, you'll need to get [pipenv installed first](http://pipenv.readthedocs.io/en/latest/install/#installing-pipenv). Once you have pipenv installed, you can install the dependencies:
 
 ```
-pipenv install --dev
+pipenv sync
 ```
+
+If you update the `Pipfile` or want to update the dependency versions, you can run `pipenv install --dev`. This recalculates all the dependency versions, so may throw up dependency version conflicts which aren't present in the existing `Pipfile.lock`.
 
 With the dependencies installed, you can enter the virtual environment so your dependencies are used:
 
