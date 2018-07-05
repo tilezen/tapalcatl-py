@@ -104,6 +104,29 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(16, 0, 0, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 'json'), offset)
 
+    def test_zoom_zero(self):
+        from server import meta_and_offset
+
+        # check that when the metatile size is larger (e.g: 8), we can still
+        # access the low zoom tiles 0-3.
+        meta, offset = meta_and_offset(TileRequest(0, 0, 0, 'json'), 8, 2)
+        self.assertTileEquals(TileRequest(0, 0, 0, 'zip'), meta)
+        self.assertTileEquals(TileRequest(0, 0, 0, 'json'), offset)
+
+        meta, offset = meta_and_offset(TileRequest(1, 0, 1, 'json'), 8, 2)
+        self.assertTileEquals(TileRequest(0, 0, 0, 'zip'), meta)
+        self.assertTileEquals(TileRequest(1, 0, 1, 'json'), offset)
+
+        meta, offset = meta_and_offset(TileRequest(2, 1, 3, 'json'), 8, 2)
+        self.assertTileEquals(TileRequest(0, 0, 0, 'zip'), meta)
+        self.assertTileEquals(TileRequest(2, 1, 3, 'json'), offset)
+
+        # only once the offset exceeds the metatile size (at the request tile
+        # size) does it start to shift down zooms.
+        meta, offset = meta_and_offset(TileRequest(3, 2, 7, 'json'), 8, 2)
+        self.assertTileEquals(TileRequest(1, 0, 1, 'zip'), meta)
+        self.assertTileEquals(TileRequest(2, 2, 3, 'json'), offset)
+
     def test_compute_key(self):
         from server import compute_key
 

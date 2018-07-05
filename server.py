@@ -4,7 +4,6 @@ import dateutil.parser
 import hashlib
 import logging
 import math
-import sys
 import time
 import zipfile
 from collections import namedtuple
@@ -50,8 +49,6 @@ CacheInfo = namedtuple('CacheInfo', ['last_modified', 'etag'])
 StorageResponse = namedtuple('StorageResponse', ['data', 'cache_info'])
 
 
-
-
 class MetatileNotModifiedException(Exception):
     pass
 
@@ -93,9 +90,11 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
 
     delta_z = int(meta_zoom - tile_zoom)
 
+    # clip the top of the range, as we don't ever have tiles with negative
+    # zooms. this might change the effective delta between the zoom level of
+    # the request and the zoom level of the metatile.
     if requested_tile.z < delta_z:
         meta = TileRequest(0, 0, 0, 'zip')
-        offset = TileRequest(0, 0, 0, requested_tile.format)
     else:
 
         # allows setting a maximum detail level beyond which all features are
@@ -116,12 +115,14 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
             requested_tile.y >> delta_z,
             'zip',
         )
-        offset = TileRequest(
-            requested_tile.z - meta.z,
-            requested_tile.x - (meta.x << delta_z),
-            requested_tile.y - (meta.y << delta_z),
-            requested_tile.format,
-        )
+
+    actual_delta_z = requested_tile.z - meta.z
+    offset = TileRequest(
+        actual_delta_z,
+        requested_tile.x - (meta.x << actual_delta_z),
+        requested_tile.y - (meta.y << actual_delta_z),
+        requested_tile.format,
+    )
 
     return meta, offset
 
