@@ -96,7 +96,6 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
     # the request and the zoom level of the metatile.
     if requested_tile.z < delta_z:
         meta = TileRequest(0, 0, 0, 'zip')
-        offset = TileRequest(0, 0, 0, requested_tile.format)
     else:
 
         # allows setting a maximum detail level beyond which all features are
