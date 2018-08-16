@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "91fc9c3b1988a535b4db63e3eef3da940094dfc55fdb9e4f48d314f598e5da87"
+            "sha256": "bbcdcda9d1d1a84baa44b4fd441890dff42897c220c900546480a41e31a1ec0c"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -191,7 +191,8 @@
         },
         "futures": {
             "hashes": [],
-            "markers": "python_version < '3' and python_version >= '2.6'",
+            "index": "pypi",
+            "markers": "python_version < '3.0'",
             "version": "==3.2.0"
         },
         "hjson": {
