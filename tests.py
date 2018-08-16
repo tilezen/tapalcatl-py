@@ -4,10 +4,10 @@ from server import TileRequest
 
 class MetatileTestCase(unittest.TestCase):
     def assertTileEquals(self, expected, actual):
-        self.assertEquals(expected.z, actual.z)
-        self.assertEquals(expected.x, actual.x)
-        self.assertEquals(expected.y, actual.y)
-        self.assertEquals(expected.format, actual.format)
+        self.assertEqual(expected.z, actual.z)
+        self.assertEqual(expected.x, actual.x)
+        self.assertEqual(expected.y, actual.y)
+        self.assertEqual(expected.format, actual.format)
 
     def test_is_power_of_two(self):
         from server import is_power_of_two
@@ -24,9 +24,9 @@ class MetatileTestCase(unittest.TestCase):
     def test_size_to_zoom(self):
         from server import size_to_zoom
 
-        self.assertEquals(0.0, size_to_zoom(1))
-        self.assertEquals(1.0, size_to_zoom(2))
-        self.assertEquals(2.0, size_to_zoom(4))
+        self.assertEqual(0.0, size_to_zoom(1))
+        self.assertEqual(1.0, size_to_zoom(2))
+        self.assertEqual(2.0, size_to_zoom(4))
 
     def test_meta_and_offset(self):
         from server import meta_and_offset
@@ -132,16 +132,16 @@ class MetatileTestCase(unittest.TestCase):
 
         t = TileRequest(13, 4008, 3973, 'zip')
 
-        self.assertEquals(
+        self.assertEqual(
             'abc/c1315/all/13/4008/3973.zip',
             compute_key('abc', 'all', t, KeyFormatType.PREFIX_HASH))
-        self.assertEquals(
+        self.assertEqual(
             'c1315/all/13/4008/3973.zip',
             compute_key('', 'all', t, KeyFormatType.PREFIX_HASH))
-        self.assertEquals(
+        self.assertEqual(
             'all/13/4008/3973.zip',
             compute_key('', 'all', t, KeyFormatType.NO_HASH))
-        self.assertEquals(
+        self.assertEqual(
             'c1315/abc/all/13/4008/3973.zip',
             compute_key('abc', 'all', t, KeyFormatType.HASH_PREFIX))
 
