@@ -128,19 +128,22 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(2, 2, 3, 'json'), offset)
 
     def test_compute_key(self):
-        from server import compute_key
+        from server import compute_key, KeyFormatType
 
         t = TileRequest(13, 4008, 3973, 'zip')
 
         self.assertEquals(
             'abc/c1315/all/13/4008/3973.zip',
-            compute_key('abc', 'all', t, True))
+            compute_key('abc', 'all', t, KeyFormatType.PREFIX_HASH))
         self.assertEquals(
             'c1315/all/13/4008/3973.zip',
-            compute_key('', 'all', t, True))
+            compute_key('', 'all', t, KeyFormatType.PREFIX_HASH))
         self.assertEquals(
             'all/13/4008/3973.zip',
-            compute_key('', 'all', t, False))
+            compute_key('', 'all', t, KeyFormatType.NO_HASH))
+        self.assertEquals(
+            'c1315/abc/all/13/4008/3973.zip',
+            compute_key('abc', 'all', t, KeyFormatType.HASH_PREFIX))
 
 
 class HandleTileTestCase(unittest.TestCase):

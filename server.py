@@ -7,6 +7,7 @@ import math
 import time
 import zipfile
 from collections import namedtuple
+from enum import Enum
 from io import BytesIO
 from flask import Blueprint, Flask, current_app, make_response, render_template, request, abort
 from flask_caching import Cache
@@ -127,7 +128,24 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
     return meta, offset
 
 
-def compute_key(prefix, layer, meta_tile, include_hash=True):
+class KeyFormatType(Enum):
+    """
+    S3 key format options; either no hash, the hash followed by the prefix, or
+    the prefix followed by the hash. For example, for metatile 10/511/430 in
+    the 'all' layer:
+
+     * no_hash:     /180723/all/10/511/430.zip
+     * hash_prefix: /0035e/180723/all/10/511/430.zip
+     * prefix_hash: /180723/0035e/all/10/511/430.zip
+    """
+
+    NO_HASH = "{prefix}{suffix}"
+    HASH_PREFIX = "{hash}{prefix}{suffix}"
+    PREFIX_HASH = "{prefix}{hash}{suffix}"
+
+
+def compute_key(prefix, layer, meta_tile,
+                key_format_type=KeyFormatType.NO_HASH):
     k = "/{layer}/{z}/{x}/{y}.{fmt}".format(
         layer=layer,
         z=meta_tile.z,
@@ -136,18 +154,16 @@ def compute_key(prefix, layer, meta_tile, include_hash=True):
         fmt=meta_tile.format,
     )
 
-    if include_hash:
-        h = hashlib.md5(k.encode('utf8')).hexdigest()[:5]
-        k = "/{hash}{suffix}".format(
-            hash=h,
-            suffix=k,
-        )
+    # make sure each part is either empty or starts with a /, that means that
+    # they will combine to make a valid path.
+    h = "/" + hashlib.md5(k.encode('utf8')).hexdigest()[:5]
+    prefix = "/" + prefix if prefix else ""
 
-    if prefix:
-        k = "/{prefix}{suffix}".format(
-            prefix=prefix,
-            suffix=k,
-        )
+    k = key_format_type.value.format(
+        hash=h,
+        prefix=prefix,
+        suffix=k,
+    )
 
     # Strip off the leading slash
     return k[1:]
@@ -161,10 +177,21 @@ def metatile_fetch(meta, cache_info):
 
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
+    key_format_type = current_app.config.get('KEY_FORMAT_TYPE')
     requester_pays = current_app.config.get('REQUESTER_PAYS')
 
+    if key_format_type:
+        key_format_type = KeyFormatType[key_format_type]
+    elif include_hash == False:
+        # map include_hash onto key format types for backwards compatibility
+        key_format_type = KeyFormatType.NO_HASH
+    else:
+        # note that prefix-hash is the default if neither config parameter is
+        # provided!
+        key_format_type = KeyFormatType.PREFIX_HASH
+
     s3_bucket = current_app.config.get('S3_BUCKET')
-    s3_key = compute_key(s3_key_prefix, 'all', meta, include_hash)
+    s3_key = compute_key(s3_key_prefix, 'all', meta, key_format_type)
 
     get_params = {
         "Bucket": s3_bucket,
