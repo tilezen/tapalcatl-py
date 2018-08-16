@@ -29,7 +29,8 @@ S3_BUCKET = os.environ.get("S3_BUCKET")
 S3_PREFIX = os.environ.get("S3_PREFIX")
 METATILE_SIZE = int(os.environ.get("METATILE_SIZE", '4'))
 METATILE_MAX_DETAIL_ZOOM = int(os.environ.get("METATILE_MAX_DETAIL_ZOOM")) if os.environ.get("METATILE_MAX_DETAIL_ZOOM") else None
-INCLUDE_HASH = os.environ.get("INCLUDE_HASH", 'true') == 'true'
+INCLUDE_HASH = os.environ.get("INCLUDE_HASH") == 'true' if os.environ.get("INCLUDE_HASH") else None
+KEY_FORMAT_TYPE = os.environ.get("KEY_FORMAT_TYPE")
 REQUESTER_PAYS = os.environ.get("REQUESTER_PAYS", 'false') == 'true'
 
 COMPRESS_MIMETYPES = [

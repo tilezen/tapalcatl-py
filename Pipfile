@@ -8,10 +8,11 @@ name = "pypi"
 [dev-packages]
 
 zappa = "*"
-
+futures = {version = "*", markers="python_version < '3.0'"}
 
 [packages]
 
+enum34 = {version = "*", markers="python_version < '3.4'"}
 flask = "*"
 flask-caching = "*"
 flask-compress = "*"
