@@ -7,12 +7,18 @@ import math
 import time
 import zipfile
 from collections import namedtuple
-from enum import Enum
 from io import BytesIO
 from flask import Blueprint, Flask, current_app, make_response, render_template, request, abort
 from flask_caching import Cache
 from flask_compress import Compress
 from flask_cors import CORS
+
+# make compatible with both 3.4+, which has enum built in, and <=3.3 which
+# doesn't.
+try:
+    from enum import Enum
+except ImportError:
+    from enum34 import Enum
 
 
 tile_bp = Blueprint('tiles', __name__)
