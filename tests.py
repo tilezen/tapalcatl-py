@@ -145,6 +145,13 @@ class MetatileTestCase(unittest.TestCase):
             'c1315/abc/all/13/4008/3973.zip',
             compute_key('abc', 'all', t, KeyFormatType.HASH_PREFIX))
 
+        # test for "new format" hashed path where layer isn't included
+        # since https://github.com/tilezen/tilequeue/pull/344
+        t2 = TileRequest(10, 14, 719, 'zip')
+        self.assertEqual(
+            '27584/180723/10/14/719.zip',
+            compute_key('180723', '', t2, KeyFormatType.HASH_PREFIX))
+
 
 class HandleTileTestCase(unittest.TestCase):
     def test_handle_tile_storage_hit(self):

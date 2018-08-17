@@ -27,6 +27,7 @@ TILES_URL_BASE = os.environ.get('TILES_URL_BASE')
 TILES_PREVIEW_API_KEY = os.environ.get('TILES_PREVIEW_API_KEY')
 S3_BUCKET = os.environ.get("S3_BUCKET")
 S3_PREFIX = os.environ.get("S3_PREFIX")
+S3_LAYER = os.environ.get("S3_LAYER", "all")
 METATILE_SIZE = int(os.environ.get("METATILE_SIZE", '4'))
 METATILE_MAX_DETAIL_ZOOM = int(os.environ.get("METATILE_MAX_DETAIL_ZOOM")) if os.environ.get("METATILE_MAX_DETAIL_ZOOM") else None
 INCLUDE_HASH = os.environ.get("INCLUDE_HASH") == 'true' if os.environ.get("INCLUDE_HASH") else None
