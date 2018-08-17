@@ -152,18 +152,33 @@ class KeyFormatType(Enum):
 
 def compute_key(prefix, layer, meta_tile,
                 key_format_type=KeyFormatType.NO_HASH):
-    k = "/{layer}/{z}/{x}/{y}.{fmt}".format(
-        layer=layer,
+    k = "{z}/{x}/{y}.{fmt}".format(
         z=meta_tile.z,
         x=meta_tile.x,
         y=meta_tile.y,
         fmt=meta_tile.format,
     )
 
+    # in versions of code before https://github.com/tilezen/tilequeue/pull/344,
+    # we included the layer and leading slash in the hashed string. after that
+    # PR, we no longer support having a layer in the path and _also_ drop the
+    # leading slash from the hashed string.
+    if layer:
+        k = "/{layer}/{suffix}".format(
+            layer=layer,
+            suffix=k
+        )
+
     # make sure each part is either empty or starts with a /, that means that
     # they will combine to make a valid path.
     h = "/" + hashlib.md5(k.encode('utf8')).hexdigest()[:5]
     prefix = "/" + prefix if prefix else ""
+
+    if not layer:
+        # in the case where layer wasn't provided and we didn't hash the
+        # leading slash, we still need to add a leading slash so that it makes
+        # valid path.
+        k = "/" + k
 
     k = key_format_type.value.format(
         hash=h,
@@ -184,6 +199,7 @@ def metatile_fetch(meta, cache_info):
     s3_key_prefix = current_app.config.get('S3_PREFIX')
     include_hash = current_app.config.get('INCLUDE_HASH')
     key_format_type = current_app.config.get('KEY_FORMAT_TYPE')
+    s3_key_layer = current_app.config.get('S3_LAYER')
     requester_pays = current_app.config.get('REQUESTER_PAYS')
 
     if key_format_type:
@@ -197,7 +213,7 @@ def metatile_fetch(meta, cache_info):
         key_format_type = KeyFormatType.PREFIX_HASH
 
     s3_bucket = current_app.config.get('S3_BUCKET')
-    s3_key = compute_key(s3_key_prefix, 'all', meta, key_format_type)
+    s3_key = compute_key(s3_key_prefix, s3_key_layer, meta, key_format_type)
 
     get_params = {
         "Bucket": s3_bucket,
