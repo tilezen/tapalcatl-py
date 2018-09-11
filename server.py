@@ -300,7 +300,7 @@ def retrieve_tile(meta, offset, cache_info):
 
 
 def is_valid_tile_request(z, x, y):
-    return (0 <= z < 20) and (0 <= x < 2**z) and (0 <= y < 2**z)
+    return (0 <= z < 17) and (0 <= x < 2**z) and (0 <= y < 2**z)
 
 
 @tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
