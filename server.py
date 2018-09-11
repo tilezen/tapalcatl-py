@@ -299,15 +299,22 @@ def retrieve_tile(meta, offset, cache_info):
     )
 
 
+def is_valid_tile_request(z, x, y):
+    return (0 <= z < 17) and (0 <= x < 2**z) and (0 <= y < 2**z)
+
+
 @tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
 @tile_bp.route('/tilezen/vector/v1/all/<int:z>/<int:x>/<int:y>.<fmt>')
 def handle_tile(z, x, y, fmt, tile_pixel_size=None):
-    requested_tile = TileRequest(z, x, y, fmt)
+    if not is_valid_tile_request(z, x, y):
+        return abort(400, "Requested tile out of range.")
 
     tile_pixel_size = tile_pixel_size or 256
     tile_size = tile_pixel_size / 256
     if tile_size != int(tile_size):
         return abort(400, "Invalid tile size. %s is not a multiple of 256." % tile_pixel_size)
+
+    requested_tile = TileRequest(z, x, y, fmt)
 
     tile_size = int(tile_size)
 
