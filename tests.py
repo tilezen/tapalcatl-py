@@ -143,8 +143,8 @@ class MetatileTestCase(unittest.TestCase):
         self.assertFalse(is_valid_tile_request(15, 15800, 2341583))
         self.assertFalse(is_valid_tile_request(12, 4096, 1844674407))
         # In the corners
-        self.assertFalse(is_valid_tile_request(16, 65535, 10110))
-        self.assertFalse(is_valid_tile_request(16, 65536, 10111))
+        self.assertTrue(is_valid_tile_request(16, 65535, 65535))
+        self.assertFalse(is_valid_tile_request(16, 65536, 65536))
 
     def test_compute_key(self):
         from server import compute_key, KeyFormatType
