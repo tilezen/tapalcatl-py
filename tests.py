@@ -127,6 +127,25 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(1, 0, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(2, 2, 3, 'json'), offset)
 
+    def test_valid_tile_request(self):
+        from server import is_valid_tile_request
+
+        # The world
+        self.assertTrue(is_valid_tile_request(0, 0, 0))
+        # Home sweet home
+        self.assertTrue(is_valid_tile_request(15, 15800, 23583))
+        # Negative!
+        self.assertFalse(is_valid_tile_request(-1, 15800, 23583))
+        self.assertFalse(is_valid_tile_request(15, -23, 23583))
+        self.assertFalse(is_valid_tile_request(15, 15800, -12))
+        # Too big!
+        self.assertFalse(is_valid_tile_request(15, 2401239, 23583))
+        self.assertFalse(is_valid_tile_request(15, 15800, 2341583))
+        self.assertFalse(is_valid_tile_request(12, 4096, 1844674407))
+        # In the corners
+        self.assertFalse(is_valid_tile_request(16, 65535, 10110))
+        self.assertFalse(is_valid_tile_request(16, 65536, 10111))
+
     def test_compute_key(self):
         from server import compute_key, KeyFormatType
 
