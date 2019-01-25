@@ -450,9 +450,6 @@ def handle_landcover_tile(z, x, y, fmt, tile_pixel_size=None):
 
     requested_tile = TileRequest(z, x, y, tile_size, fmt)
 
-    t2_materialized_zooms = [0, 7]
-    t2_metatile_size = 1
-
     (meta, offset) = t2_meta_and_offset(
         requested_tile,
         current_app.config.get('LANDCOVER_MATERIALIZED_ZOOMS'),
