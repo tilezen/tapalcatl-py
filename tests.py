@@ -39,7 +39,7 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(12, 637, 936, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'json'), offset)
 
-        meta, offset = meta_and_offset(TileRequest(12, 637, 936, 2, 'json'), 1)
+        meta, offset = meta_and_offset(TileRequest(12, 637, 936, 1, 'json'), 2)
         self.assertTileEquals(TileRequest(11, 318, 468, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(1, 1, 0, 1, 'json'), offset)
 
@@ -47,7 +47,7 @@ class MetatileTestCase(unittest.TestCase):
         self.assertTileEquals(TileRequest(12, 637, 936, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'json'), offset)
 
-        meta, offset = meta_and_offset(TileRequest(12, 637, 935, 8, 'json'), 1)
+        meta, offset = meta_and_offset(TileRequest(12, 637, 935, 1, 'json'), 8)
         self.assertTileEquals(TileRequest(9, 79, 116, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(3, 5, 7, 1, 'json'), offset)
 
@@ -59,7 +59,7 @@ class MetatileTestCase(unittest.TestCase):
         # check that when the metatile would be smaller than the world (i.e:
         # zoom < 0) then it just stops at 0 and we get the offset to the 0/0/0
         # tile.
-        meta, offset = meta_and_offset(TileRequest(0, 0, 0, 2, 'json'), 1)
+        meta, offset = meta_and_offset(TileRequest(0, 0, 0, 1, 'json'), 2)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'json'), offset)
 
@@ -70,7 +70,7 @@ class MetatileTestCase(unittest.TestCase):
             tile_px, request_z = map(int, request.split("/"))
             tile_size = tile_px // 256
             meta, offset = meta_and_offset(
-                TileRequest(request_z, 0, 0, 4, 'json'), tile_size,
+                TileRequest(request_z, 0, 0, tile_size, 'json'), 4,
                 metatile_max_detail_zoom=14)
             self.assertTileEquals(TileRequest(meta_z, 0, 0, 1, 'zip'), meta)
             self.assertTileEquals(TileRequest(offset_z, 0, 0, 1, 'json'), offset)
@@ -109,21 +109,21 @@ class MetatileTestCase(unittest.TestCase):
 
         # check that when the metatile size is larger (e.g: 8), we can still
         # access the low zoom tiles 0-3.
-        meta, offset = meta_and_offset(TileRequest(0, 0, 0, 8, 'json'), 2)
+        meta, offset = meta_and_offset(TileRequest(0, 0, 0, 2, 'json'), 8)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'json'), offset)
 
-        meta, offset = meta_and_offset(TileRequest(1, 0, 1, 8, 'json'), 2)
+        meta, offset = meta_and_offset(TileRequest(1, 0, 1, 2, 'json'), 8)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(1, 0, 1, 1, 'json'), offset)
 
-        meta, offset = meta_and_offset(TileRequest(2, 1, 3, 8, 'json'), 2)
+        meta, offset = meta_and_offset(TileRequest(2, 1, 3, 2, 'json'), 8)
         self.assertTileEquals(TileRequest(0, 0, 0, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(2, 1, 3, 1, 'json'), offset)
 
         # only once the offset exceeds the metatile size (at the request tile
         # size) does it start to shift down zooms.
-        meta, offset = meta_and_offset(TileRequest(3, 2, 7, 8, 'json'), 2)
+        meta, offset = meta_and_offset(TileRequest(3, 2, 7, 2, 'json'), 8)
         self.assertTileEquals(TileRequest(1, 0, 1, 1, 'zip'), meta)
         self.assertTileEquals(TileRequest(2, 2, 3, 1, 'json'), offset)
 
