@@ -383,7 +383,10 @@ def tilejson(fmt, tile_pixel_size=None):
 
 def t2_meta_and_offset(requested_tile, materialized_zooms, metatile_size):
     # Find the materialized zoom that holds this tile
-    mz = next(x for x in sorted(materialized_zooms, reverse=True) if x <= requested_tile.z)
+    try:
+        mz = next(z for z in sorted(materialized_zooms, reverse=True) if z <= requested_tile.z)
+    except StopIteration as e:
+        raise ValueError("Couldn't find materialized zoom for requested tile %s" % requested_tile)
 
     # Find the tile at the materialized zoom that holds the requested tile
     dz = requested_tile.z - mz
