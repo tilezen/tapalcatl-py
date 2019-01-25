@@ -39,7 +39,7 @@ COMPRESS_MIMETYPES = [
     'application/json',
 ]
 
-# Land cover layer is built using Tapalcatl2 archives that require a bit of extra configuration:
+# Landcover layer is built using Tapalcatl2 archives that require a bit of extra configuration:
 # The maximum zoom level for the land cover data is different than the vector tiles
 LANDCOVER_MAX_ZOOM = 13
 # Tapalcatl2 archives are "materialized" at particular zoom levels at build time.
