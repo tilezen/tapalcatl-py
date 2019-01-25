@@ -51,7 +51,7 @@ MIME_TYPES = {
     "mvtb": "application/x-protobuf",
     "topojson": "application/json",
 }
-TileRequest = namedtuple('TileRequest', ['z', 'x', 'y', 'format'])
+TileRequest = namedtuple('TileRequest', ['z', 'x', 'y', 'scale', 'format'])
 CacheInfo = namedtuple('CacheInfo', ['last_modified', 'etag'])
 StorageResponse = namedtuple('StorageResponse', ['data', 'cache_info'])
 
@@ -80,20 +80,20 @@ def size_to_zoom(size):
     return math.log(size, 2)
 
 
-def meta_and_offset(requested_tile, meta_size, tile_size,
+def meta_and_offset(requested_tile, meta_size,
                     metatile_max_detail_zoom=None):
     if not is_power_of_two(meta_size):
         raise ValueError("Metatile size %s is not a power of two" % meta_size)
-    if not is_power_of_two(tile_size):
-        raise ValueError("Tile size %s is not a power of two" % tile_size)
+    if not is_power_of_two(requested_tile.scale):
+        raise ValueError("Tile size %s is not a power of two" % requested_tile.scale)
 
     meta_zoom = size_to_zoom(meta_size)
-    tile_zoom = size_to_zoom(tile_size)
+    tile_zoom = size_to_zoom(requested_tile.scale)
 
     if tile_zoom > meta_zoom:
         raise ValueError(
             "Tile size must not be greater than metatile size, "
-            "but %d > %d." % (tile_size, meta_size))
+            "but %d > %d." % (requested_tile.scale, meta_size))
 
     delta_z = int(meta_zoom - tile_zoom)
 
@@ -101,7 +101,7 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
     # zooms. this might change the effective delta between the zoom level of
     # the request and the zoom level of the metatile.
     if requested_tile.z < delta_z:
-        meta = TileRequest(0, 0, 0, 'zip')
+        meta = TileRequest(0, 0, 0, 1, 'zip')
     else:
 
         # allows setting a maximum detail level beyond which all features are
@@ -120,6 +120,7 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
             requested_tile.z - delta_z,
             requested_tile.x >> delta_z,
             requested_tile.y >> delta_z,
+            1,
             'zip',
         )
 
@@ -128,6 +129,7 @@ def meta_and_offset(requested_tile, meta_size, tile_size,
         actual_delta_z,
         requested_tile.x - (meta.x << actual_delta_z),
         requested_tile.y - (meta.y << actual_delta_z),
+        requested_tile.scale,
         requested_tile.format,
     )
 
@@ -254,7 +256,7 @@ def metatile_fetch(meta, cache_info):
             raise MetatileNotModifiedException()
         elif error_code == 'NoSuchKey':
             raise MetatileNotFoundException(
-                "No tile found at s3://%s/%s" % (s3_bucket, s3_key)
+                "No metatile found at s3://%s/%s" % (s3_bucket, s3_key)
             )
         else:
             raise UnknownMetatileException(
@@ -299,8 +301,8 @@ def retrieve_tile(meta, offset, cache_info):
     )
 
 
-def is_valid_tile_request(z, x, y):
-    return (0 <= z < 17) and (0 <= x < 2**z) and (0 <= y < 2**z)
+def is_valid_tile_request(z, x, y, max_zoom=17):
+    return (0 <= z < max_zoom) and (0 <= x < 2**z) and (0 <= y < 2**z)
 
 
 @tile_bp.route('/tilezen/vector/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
@@ -313,15 +315,13 @@ def handle_tile(z, x, y, fmt, tile_pixel_size=None):
     tile_size = tile_pixel_size / 256
     if tile_size != int(tile_size):
         return abort(400, "Invalid tile size. %s is not a multiple of 256." % tile_pixel_size)
-
-    requested_tile = TileRequest(z, x, y, fmt)
-
     tile_size = int(tile_size)
+
+    requested_tile = TileRequest(z, x, y, tile_size, fmt)
 
     meta, offset = meta_and_offset(
         requested_tile,
         current_app.config.get('METATILE_SIZE'),
-        tile_size,
         metatile_max_detail_zoom=current_app.config.get('METATILE_MAX_DETAIL_ZOOM'),
     )
 
@@ -379,6 +379,112 @@ def tilejson(fmt, tile_pixel_size=None):
     resp = make_response(rendered_template)
     resp.headers = {'Content-Type': 'application/json'}
     return resp
+
+
+def t2_meta_and_offset(requested_tile, materialized_zooms, metatile_size):
+    # Find the materialized zoom that holds this tile
+    try:
+        mz = next(z for z in sorted(materialized_zooms, reverse=True) if z <= requested_tile.z)
+    except StopIteration as e:
+        raise ValueError("Couldn't find materialized zoom for requested tile %s" % requested_tile)
+
+    # Find the tile at the materialized zoom that holds the requested tile
+    dz = requested_tile.z - mz
+    mx = requested_tile.x >> dz
+    my = requested_tile.y >> dz
+    mx -= mx % metatile_size
+    my -= my % metatile_size
+
+    meta = TileRequest(mz, mx, my, 1, 'zip')
+
+    # Build the key for the tile inside the archive
+    offset = requested_tile
+
+    return meta, offset
+
+
+def t2_extract_tile(metatile_bytes, offset):
+    data = BytesIO(metatile_bytes)
+    z = zipfile.ZipFile(data, 'r')
+
+    offset_key = '{zoom}/{x}/{y}{scale}.{format}'.format(
+        zoom=offset.z,
+        x=offset.x,
+        y=offset.y,
+        scale='' if offset.scale < 2 else '@%dx' % offset.scale,
+        format=offset.format,
+    )
+
+    try:
+        return z.read(offset_key)
+    except KeyError as e:
+        raise TileNotFoundInMetatile("Couldn't find tile %s in metatile" % offset_key)
+
+
+def t2_retrieve_tile(meta, offset, cache_info):
+    metatile_data = metatile_fetch(meta, cache_info)
+    tile_data = t2_extract_tile(metatile_data.data, offset)
+
+    return StorageResponse(
+        data=tile_data,
+        cache_info=CacheInfo(
+            last_modified=metatile_data.cache_info.last_modified,
+            etag=metatile_data.cache_info.etag,
+        )
+    )
+
+
+@tile_bp.route('/tilezen/landcover/v1/<int:tile_pixel_size>/all/<int:z>/<int:x>/<int:y>.<fmt>')
+@tile_bp.route('/tilezen/landcover/v1/all/<int:z>/<int:x>/<int:y>.<fmt>')
+def handle_landcover_tile(z, x, y, fmt, tile_pixel_size=None):
+    if not is_valid_tile_request(z, x, y, max_zoom=current_app.config.get('LANDCOVER_MAX_ZOOM')):
+        return abort(400, "Requested tile out of range.")
+
+    tile_pixel_size = tile_pixel_size or 256
+    tile_size = tile_pixel_size / 256
+    if tile_size != int(tile_size):
+        return abort(400, "Invalid tile size. %s is not a multiple of 256." % tile_pixel_size)
+    if tile_size != 2:
+        return abort(400, "Landcover only supports 512 tile size.")
+    tile_size = int(tile_size)
+
+    requested_tile = TileRequest(z, x, y, tile_size, fmt)
+
+    (meta, offset) = t2_meta_and_offset(
+        requested_tile,
+        current_app.config.get('LANDCOVER_MATERIALIZED_ZOOMS'),
+        current_app.config.get('LANDCOVER_METATILE_SIZE'),
+    )
+
+    request_cache_info = CacheInfo(
+        last_modified=parse_header_time(request.headers.get('If-Modified-Since')),
+        etag=request.headers.get('If-None-Match'),
+    )
+
+    try:
+        storage_result = t2_retrieve_tile(meta, offset, request_cache_info)
+
+        response = make_response(storage_result.data)
+        response.content_type = MIME_TYPES.get(fmt)
+        response.last_modified = storage_result.cache_info.last_modified
+        response.cache_control.public = True
+        response.cache_control.max_age = current_app.config.get("CACHE_MAX_AGE")
+        if current_app.config.get("SHARED_CACHE_MAX_AGE"):
+            response.cache_control.s_maxage = current_app.config.get("SHARED_CACHE_MAX_AGE")
+        response.set_etag(storage_result.cache_info.etag)
+        return response
+
+    except MetatileNotFoundException:
+        current_app.logger.exception("Could not find metatile")
+        return "Metatile not found", 404
+    except TileNotFoundInMetatile:
+        current_app.logger.exception("Could not find tile in metatile")
+        return "Tile not found", 404
+    except MetatileNotModifiedException:
+        return "", 304
+    except UnknownMetatileException:
+        current_app.logger.exception("Error fetching metatile")
+        return "Metatile fetch problem", 500
 
 
 @tile_bp.route('/health_check')

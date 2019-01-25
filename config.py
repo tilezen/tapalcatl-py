@@ -38,3 +38,13 @@ COMPRESS_MIMETYPES = [
     'application/x-protobuf',
     'application/json',
 ]
+
+# Landcover layer is built using Tapalcatl2 archives that require a bit of extra configuration:
+# The maximum zoom level for the landcover data is different than the vector tiles
+LANDCOVER_MAX_ZOOM = 13
+# Tapalcatl2 archives are "materialized" at particular zoom levels at build time.
+# These are the zooms we picked when building the landcover layer
+LANDCOVER_MATERIALIZED_ZOOMS = [0, 7]
+# Tapalcatl2 archives can contain multiple neighboring tiles to form a "metatile"
+# THe landcover build used a metatile size of 1
+LANDCOVER_METATILE_SIZE = 1
