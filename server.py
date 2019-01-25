@@ -80,20 +80,20 @@ def size_to_zoom(size):
     return math.log(size, 2)
 
 
-def meta_and_offset(requested_tile, meta_size, tile_size,
+def meta_and_offset(requested_tile, meta_size,
                     metatile_max_detail_zoom=None):
     if not is_power_of_two(meta_size):
         raise ValueError("Metatile size %s is not a power of two" % meta_size)
-    if not is_power_of_two(tile_size):
-        raise ValueError("Tile size %s is not a power of two" % tile_size)
+    if not is_power_of_two(requested_tile.scale):
+        raise ValueError("Tile size %s is not a power of two" % requested_tile.scale)
 
     meta_zoom = size_to_zoom(meta_size)
-    tile_zoom = size_to_zoom(tile_size)
+    tile_zoom = size_to_zoom(requested_tile.scale)
 
     if tile_zoom > meta_zoom:
         raise ValueError(
             "Tile size must not be greater than metatile size, "
-            "but %d > %d." % (tile_size, meta_size))
+            "but %d > %d." % (requested_tile.scale, meta_size))
 
     delta_z = int(meta_zoom - tile_zoom)
 
@@ -322,7 +322,6 @@ def handle_tile(z, x, y, fmt, tile_pixel_size=None):
     meta, offset = meta_and_offset(
         requested_tile,
         current_app.config.get('METATILE_SIZE'),
-        tile_size,
         metatile_max_detail_zoom=current_app.config.get('METATILE_MAX_DETAIL_ZOOM'),
     )
 
